@@ -8,44 +8,55 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #f2f5f9;
+      background-color: #f9fafb;
       margin: 0;
       padding: 20px;
       color: #333;
     }
 
-    header {
-      margin-bottom: 30px;
-      text-align: center;
-    }
-
     h1 {
+      text-align: center;
       font-size: 24px;
-      margin-bottom: 10px;
       color: #2b6cb0;
-    }
-
-    .molde {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      margin-bottom: 20px;
-      transition: transform 0.2s ease;
-    }
-
-    .molde:hover {
-      transform: scale(1.01);
-    }
-
-    .field {
       margin-bottom: 10px;
     }
 
-    .field strong {
-      display: inline-block;
-      width: 150px;
+    .sub {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 16px;
       color: #555;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin: auto;
+      max-width: 1000px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    tr:hover {
+      background-color: #f9fafb;
     }
 
     .error {
@@ -54,33 +65,30 @@
       padding: 15px;
       border-left: 6px solid #a10000;
       border-radius: 6px;
-      margin-top: 20px;
+      margin: 20px auto;
+      max-width: 700px;
     }
 
     .loading {
-      font-style: italic;
+      text-align: center;
       color: #666;
+      font-style: italic;
     }
 
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      font-size: 14px;
-      color: #aaa;
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 14px;
+        padding: 10px;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Ficha del Molde</h1>
-    <p>ID: <span id="debugId">(cargando)</span></p>
-  </header>
 
-  <main id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</main>
+  <h1>Ficha del Molde</h1>
+  <p class="sub">ID buscado: <strong id="debugId">(cargando)</strong></p>
 
-  <footer>
-    Sistema de moldes – Google Sheets Viewer
-  </footer>
+  <div id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</div>
 
   <script>
     const idMolde = new URLSearchParams(window.location.search).get("id")?.trim().toUpperCase();
@@ -106,15 +114,21 @@
             return;
           }
 
-          let html = "";
-          matches.forEach((row, i) => {
-            html += `<div class="molde"><h3>Versión ${i + 1}</h3>`;
-            row.forEach((cell, j) => {
-              html += `<div class="field"><strong>${headers[j]}:</strong> ${cell}</div>`;
+          let html = `<div class="table-container"><table><thead><tr>`;
+          headers.forEach(header => {
+            html += `<th>${header}</th>`;
+          });
+          html += `</tr></thead><tbody>`;
+
+          matches.forEach(row => {
+            html += `<tr>`;
+            row.forEach(cell => {
+              html += `<td>${cell}</td>`;
             });
-            html += `</div>`;
+            html += `</tr>`;
           });
 
+          html += `</tbody></table></div>`;
           outputEl.innerHTML = html;
         })
         .catch(err => {
@@ -123,5 +137,6 @@
         });
     }
   </script>
+
 </body>
 </html>
