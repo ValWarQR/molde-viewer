@@ -122,8 +122,26 @@
 
           matches.forEach(row => {
             html += `<tr>`;
-            row.forEach(cell => {
-              html += `<td>${cell}</td>`;
+            row.forEach((cell, index) => {
+  const header = headers[index];
+
+  // Detectar si es la columna "Last revision"
+  if (header.toLowerCase().includes("last revision")) {
+    const date = new Date(cell);
+    if (!isNaN(date)) {
+      const formatted = date.toLocaleDateString("es-ES", {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      html += `<td>${formatted}</td>`;
+    } else {
+      html += `<td>${cell}</td>`;
+    }
+  } else {
+    html += `<td>${cell}</td>`;
+  }
+
             });
             html += `</tr>`;
           });
