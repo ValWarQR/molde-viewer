@@ -4,82 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ficha del Molde</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f9fafb;
-      margin: 0;
-      padding: 20px;
+      font-family: sans-serif;
+      background: #f9fafb;
+      margin: 20px;
       color: #333;
     }
-
     h1 {
       text-align: center;
-      font-size: 24px;
       color: #2b6cb0;
-      margin-bottom: 10px;
     }
-
     .sub {
       text-align: center;
-      margin-bottom: 30px;
-      font-size: 16px;
-      color: #555;
+      margin-bottom: 20px;
     }
-
     .table-container {
       overflow-x: auto;
       margin: auto;
       max-width: 1000px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      overflow: hidden;
+      background: #fff;
     }
-
     th, td {
       text-align: left;
-      padding: 12px 15px;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 10px;
+      border: 1px solid #ddd;
     }
-
     th {
-      background-color: #f1f5f9;
-      font-weight: 600;
-      color: #111827;
+      background: #f1f5f9;
     }
-
-    tr:hover {
-      background-color: #f9fafb;
-    }
-
-    .error {
-      background-color: #ffe0e0;
-      color: #a10000;
-      padding: 15px;
-      border-left: 6px solid #a10000;
-      border-radius: 6px;
-      margin: 20px auto;
-      max-width: 700px;
-    }
-
-    .loading {
+    .loading, .error {
       text-align: center;
-      color: #666;
-      font-style: italic;
+      margin-top: 20px;
     }
-
-    @media (max-width: 600px) {
-      th, td {
-        font-size: 14px;
-        padding: 10px;
-      }
+    .error {
+      color: #a10000;
     }
   </style>
 </head>
@@ -88,92 +51,61 @@
   <h1>Ficha del Molde</h1>
   <p class="sub">ID buscado: <strong id="debugId">(cargando)</strong></p>
 
-  <div style="text-align:center; margin-bottom: 20px;">
-    <label>Versión Actual:
-      <input type="text" id="versionInput" placeholder="Ej: 1 o 2" style="padding:5px; font-size:14px;" />
-    </label>
-    <button onclick="resaltarVersion()" style="padding:6px 10px; font-size:14px; cursor:pointer;">Resaltar</button>
-  </div>
-
   <div id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</div>
 
   <script>
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/1RvO6jCULlX2g1M3UANoD15-XB3eo5UUNt_78wVVUU9o/gviz/tq?tqx=out:json&sheet=QR%20Generator";
     const idMolde = new URLSearchParams(window.location.search).get("id")?.trim().toUpperCase();
-    document.getElementById("debugId").textContent = idMolde || "(no definido)";
+    const debugId = document.getElementById("debugId");
     const outputEl = document.getElementById("moldeData");
-    let headers = [];
-    let matches = [];
+
+    debugId.textContent = idMolde || "(no definido)";
 
     if (!idMolde) {
-      outputEl.innerHTML = "<div class='error'>❌ ID no proporcionado en la URL.</div>";
+      outputEl.innerHTML = "<p class='error'>❌ ID no proporcionado en la URL.</p>";
     } else {
-      const sheetURL = "https://docs.google.com/spreadsheets/d/1RvO6jCULlX2g1M3UANoD15-XB3eo5UUNt_78wVVUU9o/gviz/tq?tqx=out:json&sheet=QR%20Generator";
-
-      fetch(sheetURL)
+      fetch(SHEET_URL)
         .then(res => res.text())
         .then(text => {
           const json = JSON.parse(text.substring(47).slice(0, -2));
-          headers = json.table.cols.map(col => col.label);
-          const rows = json.table.rows.map(r => r.c.map(cell => cell?.v || ""));
+          const headers = json.table.cols.map(col => col.label);
+          const rows = json.table.rows.map(row => row.c.map(cell => cell?.v || ""));
 
-          matches = rows.filter(row => (row[0] || "").toString().trim().toUpperCase() === idMolde);
+          const filteredRows = rows.filter(row =>
+            row[0]?.toString().trim().toUpperCase() === idMolde
+          );
 
-          if (matches.length === 0) {
-            outputEl.innerHTML = "<div class='error'>❌ No se encontraron registros para ese ID.</div>";
+          if (!filteredRows.length) {
+            outputEl.innerHTML = "<p class='error'>❌ No se encontraron registros para ese ID.</p>";
             return;
           }
 
-          renderTable(); // Llamamos a la función que crea la tabla
+          let html = "<div class='table-container'><table><thead><tr>";
+          headers.forEach(header => html += `<th>${header}</th>`);
+          html += "</tr></thead><tbody>";
+
+          filteredRows.forEach(row => {
+            html += "<tr>";
+            row.forEach((cell, index) => {
+              const isDate = headers[index].toLowerCase().includes("last revision");
+              if (isDate) {
+                const date = new Date(cell);
+                cell = !isNaN(date) ? date.toLocaleDateString("es-ES") : cell;
+              }
+              html += `<td>${cell}</td>`;
+            });
+            html += "</tr>";
+          });
+
+          html += "</tbody></table></div>";
+          outputEl.innerHTML = html;
         })
         .catch(err => {
-          console.error("Error al cargar datos:", err);
-          outputEl.innerHTML = "<div class='error'>❌ Error al cargar los datos. Intenta nuevamente más tarde.</div>";
+          console.error("Error:", err);
+          outputEl.innerHTML = "<p class='error'>❌ Error al cargar los datos.</p>";
         });
-    }
-
-    function renderTable(versionToHighlight = null) {
-      let html = `<div class="table-container"><table><thead><tr>`;
-      headers.forEach(header => {
-        html += `<th>${header}</th>`;
-      });
-      html += `</tr></thead><tbody>`;
-
-      matches.forEach(row => {
-        const versionIndex = headers.findIndex(h => h.toLowerCase() === "version");
-        const versionValue = row[versionIndex]?.toString().trim();
-        const match = versionToHighlight && versionValue === versionToHighlight;
-        html += `<tr${match ? " style='background-color:#ffdddd'" : ""}>`;
-
-        row.forEach((cell, index) => {
-          const header = headers[index];
-          if (header.toLowerCase().includes("last revision")) {
-            const date = new Date(cell);
-            if (!isNaN(date)) {
-              const formatted = date.toLocaleDateString("es-ES", {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              });
-              html += `<td>${formatted}</td>`;
-            } else {
-              html += `<td>${cell}</td>`;
-            }
-          } else {
-            html += `<td>${cell}</td>`;
-          }
-        });
-
-        html += `</tr>`;
-      });
-
-      html += `</tbody></table></div>`;
-      outputEl.innerHTML = html;
-    }
-
-    function resaltarVersion() {
-      const version = document.getElementById("versionInput").value.trim();
-      renderTable(version);
     }
   </script>
+
 </body>
 </html>
