@@ -88,12 +88,21 @@
   <h1>Ficha del Molde</h1>
   <p class="sub">ID buscado: <strong id="debugId">(cargando)</strong></p>
 
+  <div style="text-align:center; margin-bottom: 20px;">
+    <label>Versión Actual:
+      <input type="text" id="versionInput" placeholder="Ej: 1 o 2" style="padding:5px; font-size:14px;" />
+    </label>
+    <button onclick="resaltarVersion()" style="padding:6px 10px; font-size:14px; cursor:pointer;">Resaltar</button>
+  </div>
+
   <div id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</div>
 
   <script>
     const idMolde = new URLSearchParams(window.location.search).get("id")?.trim().toUpperCase();
     document.getElementById("debugId").textContent = idMolde || "(no definido)";
     const outputEl = document.getElementById("moldeData");
+    let headers = [];
+    let matches = [];
 
     if (!idMolde) {
       outputEl.innerHTML = "<div class='error'>❌ ID no proporcionado en la URL.</div>";
@@ -104,56 +113,67 @@
         .then(res => res.text())
         .then(text => {
           const json = JSON.parse(text.substring(47).slice(0, -2));
-          const headers = json.table.cols.map(col => col.label);
+          headers = json.table.cols.map(col => col.label);
           const rows = json.table.rows.map(r => r.c.map(cell => cell?.v || ""));
 
-          const matches = rows.filter(row => (row[0] || "").toString().trim().toUpperCase() === idMolde);
+          matches = rows.filter(row => (row[0] || "").toString().trim().toUpperCase() === idMolde);
 
           if (matches.length === 0) {
             outputEl.innerHTML = "<div class='error'>❌ No se encontraron registros para ese ID.</div>";
             return;
           }
 
-          let html = `<div class="table-container"><table><thead><tr>`;
-          headers.forEach(header => {
-            html += `<th>${header}</th>`;
-          });
-          html += `</tr></thead><tbody>`;
-
-          matches.forEach(row => {
-            html += `<tr>`;
-            row.forEach((cell, index) => {
-              const header = headers[index];
-
-              // Detectar si la celda corresponde a "Last revision" y es una fecha
-              if (header.toLowerCase().includes("last revision")) {
-                const date = new Date(cell);
-                if (!isNaN(date)) {
-                  const formatted = date.toLocaleDateString("es-ES", {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                  });
-                  html += `<td>${formatted}</td>`;
-                } else {
-                  html += `<td>${cell}</td>`;
-                }
-              } else {
-                html += `<td>${cell}</td>`;
-              }
-            });
-            html += `</tr>`;
-          });
-
-          html += `</tbody></table></div>`;
-          outputEl.innerHTML = html;
+          renderTable(); // Llamamos a la función que crea la tabla
         })
         .catch(err => {
           console.error("Error al cargar datos:", err);
           outputEl.innerHTML = "<div class='error'>❌ Error al cargar los datos. Intenta nuevamente más tarde.</div>";
         });
     }
-  </script>
 
+    function renderTable(versionToHighlight = null) {
+      let html = `<div class="table-container"><table><thead><tr>`;
+      headers.forEach(header => {
+        html += `<th>${header}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+
+      matches.forEach(row => {
+        const versionIndex = headers.findIndex(h => h.toLowerCase() === "version");
+        const versionValue = row[versionIndex]?.toString().trim();
+        const match = versionToHighlight && versionValue === versionToHighlight;
+        html += `<tr${match ? " style='background-color:#ffdddd'" : ""}>`;
+
+        row.forEach((cell, index) => {
+          const header = headers[index];
+          if (header.toLowerCase().includes("last revision")) {
+            const date = new Date(cell);
+            if (!isNaN(date)) {
+              const formatted = date.toLocaleDateString("es-ES", {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              });
+              html += `<td>${formatted}</td>`;
+            } else {
+              html += `<td>${cell}</td>`;
+            }
+          } else {
+            html += `<td>${cell}</td>`;
+          }
+        });
+
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table></div>`;
+      outputEl.innerHTML = html;
+    }
+
+    function resaltarVersion() {
+      const version = document.getElementById("versionInput").value.trim();
+      renderTable(version);
+    }
+  </script>
 </body>
 </html>
