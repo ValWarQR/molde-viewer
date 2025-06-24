@@ -1,91 +1,125 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ficha del Molde</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f4f4f4;
-    }
-    h2 {
+      font-family: 'Inter', sans-serif;
+      background-color: #f2f5f9;
+      margin: 0;
+      padding: 20px;
       color: #333;
     }
+
+    header {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #2b6cb0;
+    }
+
     .molde {
-      background: #fff;
-      padding: 15px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      margin-bottom: 20px;
+      transition: transform 0.2s ease;
     }
+
+    .molde:hover {
+      transform: scale(1.01);
+    }
+
     .field {
-      margin-bottom: 5px;
+      margin-bottom: 10px;
     }
+
     .field strong {
-      width: 150px;
       display: inline-block;
+      width: 150px;
       color: #555;
     }
+
     .error {
-      color: #d8000c;
-      background-color: #ffdddd;
-      border-left: 6px solid #d8000c;
-      padding: 10px;
+      background-color: #ffe0e0;
+      color: #a10000;
+      padding: 15px;
+      border-left: 6px solid #a10000;
+      border-radius: 6px;
       margin-top: 20px;
-      border-radius: 4px;
     }
+
     .loading {
-      color: #555;
       font-style: italic;
+      color: #666;
+    }
+
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
+  <header>
+    <h1>Ficha del Molde</h1>
+    <p>ID: <span id="debugId">(cargando)</span></p>
+  </header>
 
-  <h2>Molde – ID: <span id="debugId">(cargando)</span></h2>
-  <div id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</div>
+  <main id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</main>
+
+  <footer>
+    Sistema de moldes – Google Sheets Viewer
+  </footer>
 
   <script>
     const idMolde = new URLSearchParams(window.location.search).get("id")?.trim().toUpperCase();
     document.getElementById("debugId").textContent = idMolde || "(no definido)";
+    const outputEl = document.getElementById("moldeData");
 
     if (!idMolde) {
-      document.getElementById("moldeData").innerHTML = "<div class='error'>❌ ID no proporcionado en la URL.</div>";
+      outputEl.innerHTML = "<div class='error'>❌ ID no proporcionado en la URL.</div>";
     } else {
       const sheetURL = "https://docs.google.com/spreadsheets/d/1RvO6jCULlX2g1M3UANoD15-XB3eo5UUNt_78wVVUU9o/gviz/tq?tqx=out:json&sheet=QR%20Generator";
 
       fetch(sheetURL)
         .then(res => res.text())
         .then(text => {
-          const json = JSON.parse(text.substring(47).slice(0, -2)); // Limpia el envoltorio de Google
+          const json = JSON.parse(text.substring(47).slice(0, -2));
           const headers = json.table.cols.map(col => col.label);
           const rows = json.table.rows.map(r => r.c.map(cell => cell?.v || ""));
 
           const matches = rows.filter(row => (row[0] || "").toString().trim().toUpperCase() === idMolde);
 
           if (matches.length === 0) {
-            document.getElementById("moldeData").innerHTML = "<div class='error'>❌ No se encontraron registros para ese ID.</div>";
+            outputEl.innerHTML = "<div class='error'>❌ No se encontraron registros para ese ID.</div>";
             return;
           }
 
           let html = "";
           matches.forEach((row, i) => {
-            html += `<div class="molde"><strong>Versión ${i + 1}</strong><br>`;
+            html += `<div class="molde"><h3>Versión ${i + 1}</h3>`;
             row.forEach((cell, j) => {
               html += `<div class="field"><strong>${headers[j]}:</strong> ${cell}</div>`;
             });
-            html += "</div>";
+            html += `</div>`;
           });
 
-          document.getElementById("moldeData").innerHTML = html;
+          outputEl.innerHTML = html;
         })
         .catch(err => {
           console.error("Error al cargar datos:", err);
-          document.getElementById("moldeData").innerHTML =
-            "<div class='error'>❌ Error al cargar los datos. Verifica la conexión o el formato del documento.</div>";
+          outputEl.innerHTML = "<div class='error'>❌ Error al cargar los datos. Intenta nuevamente más tarde.</div>";
         });
     }
   </script>
