@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ficha del Molde</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f4;
+    }
+    h2 {
+      color: #333;
+    }
+    .molde {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .field {
+      margin-bottom: 5px;
+    }
+    .field strong {
+      width: 150px;
+      display: inline-block;
+      color: #555;
+    }
+    .error {
+      color: #d8000c;
+      background-color: #ffdddd;
+      border-left: 6px solid #d8000c;
+      padding: 10px;
+      margin-top: 20px;
+      border-radius: 4px;
+    }
+    .loading {
+      color: #555;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Molde – ID: <span id="debugId">(cargando)</span></h2>
+  <div id="moldeData" class="loading">Cargando datos desde la hoja de cálculo...</div>
+
+  <script>
+    const idMolde = new URLSearchParams(window.location.search).get("id")?.trim().toUpperCase();
+    document.getElementById("debugId").textContent = idMolde || "(no definido)";
+
+    if (!idMolde) {
+      document.getElementById("moldeData").innerHTML = "<div class='error'>❌ ID no proporcionado en la URL.</div>";
+    } else {
+      const sheetURL = "https://docs.google.com/spreadsheets/d/1RvO6jCULlX2g1M3UANoD15-XB3eo5UUNt_78wVVUU9o/gviz/tq?tqx=out:json&sheet=QR%20Generator";
+
+      fetch(sheetURL)
+        .then(res => res.text())
+        .then(text => {
+          const json = JSON.parse(text.substring(47).slice(0, -2)); // Limpia el envoltorio de Google
+          const headers = json.table.cols.map(col => col.label);
+          const rows = json.table.rows.map(r => r.c.map(cell => cell?.v || ""));
+
+          const matches = rows.filter(row => (row[0] || "").toString().trim().toUpperCase() === idMolde);
+
+          if (matches.length === 0) {
+            document.getElementById("moldeData").innerHTML = "<div class='error'>❌ No se encontraron registros para ese ID.</div>";
+            return;
+          }
+
+          let html = "";
+          matches.forEach((row, i) => {
+            html += `<div class="molde"><strong>Versión ${i + 1}</strong><br>`;
+            row.forEach((cell, j) => {
+              html += `<div class="field"><strong>${headers[j]}:</strong> ${cell}</div>`;
+            });
+            html += "</div>";
+          });
+
+          document.getElementById("moldeData").innerHTML = html;
+        })
+        .catch(err => {
+          console.error("Error al cargar datos:", err);
+          document.getElementById("moldeData").innerHTML =
+            "<div class='error'>❌ Error al cargar los datos. Verifica la conexión o el formato del documento.</div>";
+        });
+    }
+  </script>
+</body>
+</html>
